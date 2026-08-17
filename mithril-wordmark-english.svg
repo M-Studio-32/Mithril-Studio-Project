@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="160" viewBox="0 0 1200 160" role="img" aria-labelledby="title desc" shape-rendering="geometricPrecision">
+  <title id="title">Mithril Studio</title>
+  <desc id="desc">The original Mithril Studio English wordmark, reconstructed as smooth vector strokes.</desc>
+  <g transform="translate(40 48) scale(2.28105906) translate(-248 -96)" fill="none" stroke="#080808" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter">
+    <path d="M248 123V97L260 109 272 97V123" vector-effect="non-scaling-stroke"/>
+    <path d="M297 97V123" vector-effect="non-scaling-stroke"/>
+    <path d="M320 97H338 M329 105V123" vector-effect="non-scaling-stroke"/>
+    <path d="M360 97V123 M378 97V123 M360 110H378" vector-effect="non-scaling-stroke"/>
+    <path d="M401 123V97H411C415.5 97 418 99.5 418 103.5S415.5 110 411 110H401" vector-effect="non-scaling-stroke"/>
+    <path d="M411 110L419 123" stroke-linecap="butt" vector-effect="non-scaling-stroke"/>
+    <path d="M442 97V123" vector-effect="non-scaling-stroke"/>
+    <path d="M467 97V123H483" vector-effect="non-scaling-stroke"/>
+    <path d="M541 98C538.3 96.7 535.3 96 532 96 526 96 523 98.5 523 102.5 523 106.3 526.4 108.5 532 110 537.6 111.5 541 113.7 541 117.5 541 121.5 538 124 532 124 528.7 124 525.7 123.3 523 122" vector-effect="non-scaling-stroke"/>
+    <path d="M562 97H580 M571 105V123" vector-effect="non-scaling-stroke"/>
+    <path d="M602 97V113Q602 123 613 123T623 113V97" vector-effect="non-scaling-stroke"/>
+    <path d="M647 97H653Q666 97 666 110T653 123H647" vector-effect="non-scaling-stroke"/>
+    <path d="M689 97V123" vector-effect="non-scaling-stroke"/>
+    <circle cx="725.5" cy="110" r="13.5" vector-effect="non-scaling-stroke"/>
+  </g>
+</svg>

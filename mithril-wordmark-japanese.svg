@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="160" viewBox="0 0 1200 160" role="img" aria-labelledby="title desc" shape-rendering="geometricPrecision">
+  <title id="title">ミスリルスタジオ</title>
+  <desc id="desc">The original Mithril Studio Japanese letter construction redrawn at the English wordmark stroke weight.</desc>
+  <g fill="none" stroke="#080808" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter">
+    <g transform="translate(72 80) scale(.87671233) translate(-118 -111.5)">
+      <path d="M89 75L146 88 M90 101L145 114 M83 130L153 148" vector-effect="non-scaling-stroke"/>
+    </g>
+    <g transform="translate(222.86 80) scale(.86486486) translate(-275 -111)">
+      <path d="M235 74H307L242 148 M275 112L313 148" vector-effect="non-scaling-stroke"/>
+    </g>
+    <g transform="translate(373.71 80) scale(.8) translate(-432 -109)">
+      <path d="M407 70V117 M457 69V120L431 149" vector-effect="non-scaling-stroke"/>
+    </g>
+    <g transform="translate(524.57 80) scale(.81012658) translate(-588.5 -109.5)">
+      <path d="M575 83L552 149 M593 70V147L628 119" vector-effect="non-scaling-stroke"/>
+    </g>
+    <g transform="translate(675.43 80) scale(.86486486) translate(-746 -111)">
+      <path d="M706 74H778L713 148 M746 112L784 148" vector-effect="non-scaling-stroke"/>
+    </g>
+    <g transform="translate(826.29 80) scale(.84210526) translate(-903 -110)">
+      <path d="M866 109L888 72H939L904 148 M879 96L923 142" vector-effect="non-scaling-stroke"/>
+    </g>
+    <g transform="translate(977.14 80) scale(.71111111) translate(-1066.5 -103)">
+      <path d="M1020 76H1053 M1020 99H1053 M1097 94L1043 148 M1092 62L1102 78 M1101 58L1112 74" vector-effect="non-scaling-stroke"/>
+    </g>
+    <g transform="translate(1128 80) scale(.76190476) translate(-1215.5 -108)">
+      <path d="M1178 84H1254 M1232 66V150 M1232 91L1181 148" vector-effect="non-scaling-stroke"/>
+    </g>
+  </g>
+</svg>
