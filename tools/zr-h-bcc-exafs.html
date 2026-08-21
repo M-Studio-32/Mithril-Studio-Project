@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <title>Zr-H BCC Tetrahedral EXAFS</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        
+        /* Universal Theme Matrix Engine */
+        :root {
+            --bg-body: #000000;
+            --bg-container: #000000;
+            --bg-panel: #0d0d0d;
+            --bg-canvas: #000000;
+            --border-panel: #333333;
+            --border-control: #444444;
+            --text-main: #eeeeee;
+            --text-label: #ffffff;
+            --text-stat-lbl: #aaaaaa;
+            --btn-bg: #222222;
+            --btn-hover-bg: #ffffff;
+            --btn-hover-text: #000000;
+            --slider-bg: #333333;
+            --slider-thumb: #ffffff;
+            --overlay-bg: rgba(0,0,0,0.9);
+            --particle-trail: 0, 229, 255;
+            
+            /* Atomic Visual Profiles */
+            --zr-l-offset: 0;
+            --stroke-alpha: 0.1;
+        }
+
+        [data-theme="light"] {
+            --bg-body: #f0f2f5;
+            --bg-container: #ffffff;
+            --bg-panel: #f8fafc;
+            --bg-canvas: #ffffff;
+            --border-panel: #cbd5e1;
+            --border-control: #cbd5e1;
+            --text-main: #1e293b;
+            --text-label: #0f172a;
+            --text-stat-lbl: #64748b;
+            --btn-bg: #e2e8f0;
+            --btn-hover-bg: #0f172a;
+            --btn-hover-text: #ffffff;
+            --slider-bg: #cbd5e1;
+            --slider-thumb: #0f172a;
+            --overlay-bg: rgba(255,255,255,0.95);
+            --particle-trail: 0, 140, 180;
+            
+            --zr-l-offset: 20;
+            --stroke-alpha: 0.25;
+        }
+       
+        body {
+            margin:0; padding:0; background: var(--bg-body); overflow:hidden;
+            font-family: 'Inter', sans-serif; color: var(--text-main); user-select: none;
+            width: 100vw; height: 100vh;
+            transition: background 0.3s ease;
+        }
+        #container { display: flex; flex-direction: row; width: 100%; height: 100%; background: var(--bg-container); transition: background 0.3s ease; }
+        #ui-panel {
+            width: 170px; min-width: 170px; height: 100%;
+            background: var(--bg-panel); border-right: 2px solid var(--border-panel);
+            padding: 10px; display: flex; flex-direction: column;
+            gap: 8px; box-sizing: border-box; z-index: 100;
+            transition: background 0.3s ease, border-color 0.3s ease;
+        }
+        #c { flex-grow: 1; height: 100%; display: block; background: var(--bg-canvas); }
+        #overlay {
+            position: absolute; top:0; left:0; width:100%; height:100%;
+            background: var(--overlay-bg); z-index: 1001;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer;
+        }
+        .control { display: flex; flex-direction: column; gap: 2px; width: 100%; }
+        .control label { font-size: 7.5px; color: var(--text-label); font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; }
+       
+        .legend { margin-top: 5px; padding-top: 5px; border-top: 1px solid var(--border-panel); display: flex; flex-direction: column; gap: 4px; }
+        .stat-item { font-size: 8px; font-weight: 900; text-transform: uppercase; color: var(--text-stat-lbl); }
+        .stat-val { color: var(--text-main); float: right; }
+        #abs-val { color: #00aa44; }
+        [data-theme="dark"] #abs-val { color: #00ff66; }
+        #h-val { color: #ff4444; }
+
+        button.ui-action-btn {
+            background: var(--btn-bg); color: var(--text-main); border: 1px solid var(--text-main); padding: 6px; width: 100%;
+            cursor: pointer; font-size: 11px; font-weight: 700; transition: all 0.2s; border-radius: 4px;
+        }
+        button.ui-action-btn:hover { background: var(--btn-hover-bg); color: var(--btn-hover-text); }
+        
+        select { background: var(--btn-bg); color: var(--text-main); border: 1px solid var(--border-control); font-size: 8px; padding: 2px; border-radius: 3px; width: 100%; outline: none; }
+        input[type=range] { appearance: none; background: var(--slider-bg); height: 2px; width: 100%; margin: 4px 0; }
+        input[type=range]::-webkit-slider-thumb {
+            appearance: none; width: 10px; height: 10px; background: var(--slider-thumb);
+            cursor: pointer; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.2);
+        }
+       
+        .audio-toggles { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; }
+        .audio-toggles label { font-size: 7px; color: var(--text-stat-lbl); display: flex; align-items: center; gap: 2px; cursor: pointer;}
+    </style>
+    <link rel="stylesheet" href="./mithril-tool.css">
+</head>
+<body>
+    <div id="container">
+        <div id="ui-panel">
+            <p class="tool-kicker">03 / EXAFS DYNAMICS</p>
+            <h1 class="tool-heading"><span>ZR–H BCC</span></h1>
+            <p class="tool-intro">Explore electron scattering around tetrahedral hydrogen sites in a body-centred cubic zirconium lattice.</p>
+            <button id="play-pause" class="ui-action-btn" onclick="togglePause()">⏯ PAUSE</button>
+           
+            <div class="control">
+                <label>Flux</label>
+                <select id="emit-mode" onchange="emitMode=this.value">
+                    <option value="pulse">Discrete</option>
+                    <option value="cont">Continuous</option>
+                </select>
+            </div>
+            <div class="control">
+                <label>Audio Mix</label>
+                <div class="audio-toggles">
+                   <label><input type="checkbox" id="m-emit" checked> EMT</label>
+                   <label><input type="checkbox" id="m-bounce" checked> BNC</label>
+                   <label><input type="checkbox" id="m-abs" checked> ABS</label>
+                </div>
+            </div>
+            <div class="control"><label>Mean Free Path</label><input type="range" id="mfp" min="100" max="1000" step="50" value="400" oninput="lambda_k=parseFloat(this.value)"></div>
+            <div class="control"><label>Electron Size</label><input type="range" id="e-size" min="2" max="15" step="1" value="5" oninput="particleBaseR=parseFloat(this.value)"></div>
+            <div class="control"><label>Thermal</label><input type="range" id="thermal" min="0" max="8" step="0.5" value="1" oninput="thermalK=this.value"></div>
+            <div class="control"><label>Zr Conc</label><input type="range" id="fe-vol" min="10" max="80" value="45" oninput="latSize=this.value; generateLattice()"></div>
+            <div class="control"><label>H Conc</label><input type="range" id="h-conc" min="0" max="100" value="20" oninput="hConc=this.value; generateLattice()"></div>
+            <div class="control"><label>Freq</label><input type="range" id="emit-freq" min="1" max="60" value="12" oninput="emitFreq=this.value"></div>
+            <div class="control"><label>Velocity</label><input type="range" id="vel" min="1" max="10" step="0.5" value="4.5" oninput="speedFactor=this.value"></div>
+            <div class="legend">
+                <div class="stat-item">Impacts <span class="stat-val" id="b-count">0</span></div>
+                <div class="stat-item">Absorbed <span class="stat-val" id="abs-val">0</span></div>
+                <div class="stat-item">Zr Atoms <span class="stat-val" id="fe-val">0</span></div>
+                <div class="stat-item">H Atoms <span class="stat-val" id="h-val">0</span></div>
+            </div>
+           
+            <button class="tool-reset" onclick="resetSim()">RESET</button>
+        </div>
+        <canvas id="c"></canvas>
+    </div>
+    <script>
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        let atoms = [], hAtoms = [], particles = [];
+        let isPaused = false, frame = 0;
+        let latSize = 45, hConc = 20, emitFreq = 12, speedFactor = 4.5, lambda_k = 400, particleBaseR = 5, thermalK = 1, emitMode = 'pulse';
+        let totalBounces = 0, totalAbsorbed = 0, emitter = null;
+        let audioCtx;
+       
+        const PX_PER_ANG = 45;
+        const A = 3.23;                    // Zr BCC lattice parameter (Å)
+        const BCC_SPACING = A * PX_PER_ANG; // horizontal/vertical spacing for square projection
+
+        class Atom {
+            constructor(x, y, type = 'Zr') {
+                this.baseX = x; this.baseY = y;
+                this.x = x; this.y = y;
+                this.vibeX = 0; this.vibeY = 0;
+                this.type = type;
+                this.r = type === 'Zr' ? 16 : 6;
+                this.hitTime = -999;
+                this.isEmitter = false;
+            }
+            updateVibe() {
+                this.vibeX = (Math.random() - 0.5) * thermalK;
+                this.vibeY = (Math.random() - 0.5) * thermalK;
+            }
+        }
+
+        function generateLattice() {
+            atoms = []; hAtoms = [];
+            const dpr = canvas.width / Math.max(canvas.clientWidth, 1);
+            const cx = (canvas.width / dpr) / 2;
+            const cy = (canvas.height / dpr) / 2;
+            const rows = 20, cols = 20;
+            let tempZr = [];
+
+            // BCC square projection: atoms on square grid + body-center atoms
+            for (let r = -rows/2; r < rows/2; r++) {
+                for (let c = -cols/2; c < cols/2; c++) {
+                    let x = cx + c * BCC_SPACING;
+                    let y = cy + r * BCC_SPACING;
+
+                    const distFromCenter = Math.hypot(x - cx, y - cy);
+                    if (distFromCenter < latSize * 12) {   // slightly larger radius for visibility
+                        // Corner-type atom (square grid)
+                        tempZr.push(new Atom(x, y, 'Zr'));
+
+                        // Body-center atom in each square (true BCC feature)
+                        const centerX = x + BCC_SPACING / 2;
+                        const centerY = y + BCC_SPACING / 2;
+                        if (Math.hypot(centerX - cx, centerY - cy) < latSize * 12) {
+                            tempZr.push(new Atom(centerX, centerY, 'Zr'));
+                        }
+                    }
+                }
+            }
+
+            // Tetrahedral interstitial sites in BCC (2D projection)
+            tempZr.forEach(zr => {
+                const offsets = [
+                    {dx: 0.25 * BCC_SPACING, dy: 0.50 * BCC_SPACING},
+                    {dx: 0.50 * BCC_SPACING, dy: 0.25 * BCC_SPACING},
+                    {dx: -0.25 * BCC_SPACING, dy: 0.50 * BCC_SPACING},
+                    {dx: 0.50 * BCC_SPACING, dy: -0.25 * BCC_SPACING}
+                ];
+
+                offsets.forEach(off => {
+                    const hx = zr.x + off.dx;
+                    const hy = zr.y + off.dy;
+                    const distFromCenter = Math.hypot(hx - cx, hy - cy);
+                    if (distFromCenter < latSize * 11 && Math.random() * 100 < hConc) {
+                        hAtoms.push(new Atom(hx, hy, 'H'));
+                    }
+                });
+            });
+
+            // Light atomic layout structural relaxation 
+            tempZr.forEach(zr => {
+                let dx_total = 0, dy_total = 0;
+                hAtoms.forEach(h => {
+                    const dx = zr.x - h.x, dy = zr.y - h.y, dist = Math.hypot(dx, dy);
+                    const forceRange = BCC_SPACING * 0.8;
+                    if (dist < forceRange && dist > 0) {
+                        const strength = (1 - dist/forceRange) * 8;   
+                        dx_total += (dx/dist) * strength;
+                        dy_total += (dy/dist) * strength;
+                    }
+                });
+                zr.x += dx_total * 0.3;   
+                zr.y += dy_total * 0.3;
+                zr.baseX = zr.x; zr.baseY = zr.y;
+            });
+
+            atoms = tempZr;
+
+            emitter = atoms.reduce((p, c) => Math.hypot(c.x-cx, c.y-cy) < Math.hypot(p.x-cx, p.y-cy) ? c : p);
+            if(emitter) emitter.isEmitter = true;
+
+            document.getElementById('fe-val').textContent = atoms.length;
+            document.getElementById('h-val').textContent = hAtoms.length;
+        }
+
+        function playSound(freq, type, decay, vol, toggleId) {
+            if (!audioCtx || !document.getElementById(toggleId).checked) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + decay);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); osc.stop(audioCtx.currentTime + decay);
+            } catch(e) {}
+        }
+
+        function update() {
+            if (isPaused) return;
+            frame++;
+            [...atoms, ...hAtoms].forEach(a => a.updateVibe());
+            const interval = emitMode === 'pulse' ? Math.max(1, Math.floor(61 - emitFreq)) : 2;
+            
+            if (frame % interval === 0 && emitter) {
+                const angle = Math.random() * Math.PI * 2;
+                particles.push({
+                    x: emitter.x, y: emitter.y,
+                    vx: Math.cos(angle)*speedFactor, vy: Math.sin(angle)*speedFactor,
+                    b: 0, pathLength: 0, history: [], intensity: 1.0
+                });
+                if(frame % 10 === 0) playSound(800, 'sine', 0.1, 0.05, 'm-emit');
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.history.unshift({x: p.x, y: p.y});
+                if(p.history.length > 10) p.history.pop();
+                p.pathLength += Math.hypot(p.vx, p.vy);
+                p.intensity = Math.exp(-p.pathLength / lambda_k);
+                p.x += p.vx; p.y += p.vy;
+
+                for (let s of [...atoms, ...hAtoms]) {
+                    const dx = p.x - (s.x + s.vibeX), dy = p.y - (s.y + s.vibeY), d = Math.hypot(dx, dy);
+                    if (d < (particleBaseR/2) + s.r) {
+                        const nx = dx/d, ny = dy/d, dot = p.vx*nx + p.vy*ny;
+                        if (dot < 0) {
+                            p.vx -= 2*dot*nx; p.vy -= 2*dot*ny;
+                            s.hitTime = frame; p.b++; totalBounces++;
+                            if(totalBounces % 5 === 0) {
+                                playSound(s.type === 'Zr' ? 150 : 400, 'triangle', 0.05, 0.03, 'm-bounce');
+                            }
+                        }
+                    }
+                }
+                
+                if (p.intensity < 0.01 || p.x < -50 || p.x > canvas.width + 50 || p.y < -50 || p.y > canvas.height + 50) {
+                    particles.splice(i, 1);
+                } else if (p.b > 0 && Math.hypot(p.x - emitter.x, p.y - emitter.y) < emitter.r + 5) {
+                    totalAbsorbed++;
+                    document.getElementById('abs-val').textContent = totalAbsorbed;
+                    playSound(1100, 'sine', 0.25, 0.04, 'm-abs');
+                    particles.splice(i, 1);
+                }
+            }
+            document.getElementById('b-count').textContent = totalBounces;
+        }
+
+        function draw() {
+            const dpr = canvas.width / Math.max(canvas.clientWidth, 1);
+            const sysStyles = getComputedStyle(document.body);
+            
+            ctx.fillStyle = sysStyles.getPropertyValue('--bg-canvas').trim(); 
+            ctx.fillRect(0, 0, canvas.width/dpr, canvas.height/dpr);
+            
+            const zrL = parseInt(sysStyles.getPropertyValue('--zr-l-offset').trim());
+            const sAlpha = sysStyles.getPropertyValue('--stroke-alpha').trim();
+            const trailRGB = sysStyles.getPropertyValue('--particle-trail').trim();
+
+            [...atoms, ...hAtoms].forEach(a => {
+                const isHit = frame - a.hitTime < 10;
+                const tx = a.x + a.vibeX, ty = a.y + a.vibeY;
+                ctx.beginPath(); ctx.arc(tx, ty, a.r, 0, Math.PI*2);
+                const g = ctx.createRadialGradient(tx - a.r*0.3, ty - a.r*0.3, a.r*0.1, tx, ty, a.r);
+               
+                if (a.type === 'Zr') {
+                    g.addColorStop(0, '#d6e7f2');
+                    g.addColorStop(0.3, '#355f7c');
+                    g.addColorStop(1, '#0f2c40');
+                } else {
+                    g.addColorStop(0, '#ffb0b0');
+                    g.addColorStop(0.35, '#df1f26');
+                    g.addColorStop(1, '#6d070c');
+                }
+                ctx.fillStyle = g; ctx.fill();
+                ctx.strokeStyle = a.isEmitter ? '#00e5ff' : `rgba(0,0,0,${sAlpha})`;
+                if (!a.isEmitter && document.documentElement.getAttribute('data-theme') !== 'light') {
+                    ctx.strokeStyle = `rgba(255,255,255,${sAlpha})`;
+                }
+                ctx.lineWidth = a.isEmitter ? 2 : 0.5; ctx.stroke();
+            });
+
+            particles.forEach(p => {
+                if (p.history.length > 2) {
+                    for (let j = 0; j < p.history.length - 1; j++) {
+                        const ratio = 1 - (j / p.history.length);
+                        ctx.beginPath(); ctx.moveTo(p.history[j].x, p.history[j].y);
+                        ctx.lineTo(p.history[j+1].x, p.history[j+1].y);
+                        ctx.strokeStyle = `rgba(${trailRGB}, ${p.intensity * ratio * 0.4})`;
+                        ctx.lineWidth = particleBaseR * ratio; ctx.stroke();
+                    }
+                }
+                ctx.beginPath(); ctx.arc(p.x, p.y, (particleBaseR/2) * p.intensity, 0, Math.PI*2);
+                ctx.fillStyle = document.documentElement.getAttribute('data-theme') === 'light'
+                    ? `rgba(0, 90, 120, ${p.intensity})`
+                    : `rgba(255, 255, 255, ${p.intensity})`;
+                ctx.fill();
+            });
+            update(); requestAnimationFrame(draw);
+        }
+
+        function togglePause() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            isPaused = !isPaused;
+            document.getElementById('play-pause').innerText = isPaused ? "▶ RESUME" : "⏯ PAUSE";
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function resetSim() { particles = []; totalBounces = 0; totalAbsorbed = 0; document.getElementById('abs-val').textContent = '0'; generateLattice(); }
+       
+        function resize() {
+            const dpr = Math.min(window.devicePixelRatio || 1, 3);
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = Math.max(1, Math.round(rect.width * dpr));
+            canvas.height = Math.max(1, Math.round(rect.height * dpr));
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.scale(dpr, dpr);
+            generateLattice();
+        }
+        window.addEventListener('resize', resize);
+        new ResizeObserver(resize).observe(canvas);
+        resize();
+        draw();
+    </script>
+</body>
+</html>
