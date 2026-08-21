@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hydrogen Embrittlement — Mithril Studio</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        
+        /* Theme Variables Configuration */
+        :root { 
+            --accent: #E10600; 
+            --panel: #0A0A0A; 
+            --border: #222; 
+            --bg-body: #050505;
+            --bg-canvas: #000000;
+            --text-main: #ffffff;
+            --text-label: #888888;
+            --text-brand: cyan;
+            --btn-reset: #222222;
+            --btn-reset-text: #ffffff;
+            --btn-toggle-bg: #1a1a1a;
+            --btn-toggle-border: #333333;
+        }
+
+        [data-theme="light"] {
+            --panel: #ffffff; 
+            --border: #dddddd; 
+            --bg-body: #f0f2f5;
+            --bg-canvas: #fdfdfd;
+            --text-main: #111111;
+            --text-label: #666666;
+            --text-brand: #007a8c; /* Dark teal variant for visibility over white backgrounds */
+            --btn-reset: #e0e0e0;
+            --btn-reset-text: #333333;
+            --btn-toggle-bg: #eaeaea;
+            --btn-toggle-border: #cccccc;
+        }
+        
+        body { 
+            margin: 0; 
+            padding: 0; 
+            background: var(--bg-body); 
+            overflow: hidden; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+            transition: background 0.3s ease;
+        }
+
+        #wrapper-div {
+            aspect-ratio: 16 / 9;
+            width: 100%;
+            max-width: 100vw;
+            max-height: 100vh;
+            border: 1px solid var(--border);
+            background: var(--bg-body);
+            position: relative;
+            box-sizing: border-box;
+            display: flex;
+            transition: border-color 0.3s ease, background 0.3s ease;
+        }
+
+        #sim-main { 
+            display: flex; 
+            width: 100%;
+            height: 100%; 
+            gap: 10px; 
+            padding: 10px; 
+            font-family: 'Inter', sans-serif; 
+            visibility: hidden; 
+            box-sizing: border-box;
+        }
+
+        .sidebar { 
+            width: 300px; 
+            flex-shrink: 0;
+            background: var(--panel); 
+            border: 1px solid var(--border); 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 20px; 
+            transition: background 0.3s ease, border-color 0.3s ease;
+        }
+
+        .canvas-area { 
+            flex: 2; 
+            position: relative; 
+            border: 1px solid var(--border); 
+            background: var(--bg-canvas); 
+            border-radius: 4px; 
+            overflow: hidden;
+            transition: border-color 0.3s ease, background 0.3s ease;
+        }
+
+        #three-canvas { width: 100%; height: 100%; display: block; }
+
+        .plot-area { 
+            flex: 1.5; 
+            min-width: 300px;
+            background: var(--panel); 
+            border: 1px solid var(--border); 
+            padding: 15px; 
+            transition: background 0.3s ease, border-color 0.3s ease;
+        }
+
+        .readout { font-family: monospace; color: var(--accent); font-size: 18px; text-align: right; font-weight: 700; }
+        label { color: var(--text-label); font-size: 11px; font-weight: 700; text-transform: uppercase; transition: color 0.3s ease; }
+        input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
+
+        #brand-title {
+            font-weight: 1000; 
+            color: var(--text-brand); 
+            letter-spacing: 2px;
+            transition: color 0.3s ease;
+        }
+
+        #theme-toggle {
+            padding: 8px;
+            background: var(--btn-toggle-bg);
+            color: var(--text-main);
+            border: 1px solid var(--btn-toggle-border);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+        }
+    </style>
+<style id="mithril-integration">
+  #theme-toggle { display: none !important; }
+  html, body, button, input { font-family: Arial, Helvetica, sans-serif !important; }
+  body, #wrapper-div { background: #fff !important; }
+  #wrapper-div { border: 1px solid rgba(8, 8, 8, .22); }
+  #sim-main { gap: 0; padding: 0; font-family: Arial, Helvetica, sans-serif !important; }
+  .sidebar { width: 31%; padding: 28px 24px; border: 0; border-right: 1px solid rgba(8, 8, 8, .22); }
+  .canvas-area { border: 0; border-right: 1px solid rgba(8, 8, 8, .22); border-radius: 0; }
+  .plot-area { border: 0; }
+  #brand-title { color: #080808; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; }
+  button { border-radius: 0 !important; }
+  .readout { font-family: Arial, Helvetica, sans-serif !important; }
+  #loading-overlay { color: #080808 !important; }
+</style>
+<link rel="stylesheet" href="./mithril-tool.css">
+</head>
+<body>
+
+<div id="wrapper-div">
+    <div id="loading-overlay" style="position: absolute; color: white; padding: 20px; font-family: sans-serif;">Loading simulation...</div>
+
+    <div id="sim-main">
+        <div class="sidebar">
+            <p class="tool-kicker">03 / MATERIALS SCIENCE</p>
+            <h1 class="tool-heading"><span>H</span>EMBRITTLEMENT</h1>
+            <p class="tool-intro">Explore how hydrogen content changes tensile response, ductility, and fracture.</p>
+            
+            <div class="control-group">
+                <label>Hydrogen Content</label>
+                <input type="range" id="hydrogen" min="0" max="100" value="10" step="1">
+                <div class="readout" id="h-value">10 ppm</div>
+            </div>
+
+            <div class="control-group">
+                <label>Strain</label>
+                <input type="range" id="strain-slider" min="0" max="30" value="0" step="0.1">
+                <div class="readout" id="s-value">0.0%</div>
+            </div>
+
+            <div class="tool-action-stack">
+                <button id="run-btn">RUN</button>
+                <button class="tool-reset" onclick="window.resetSim()">RESET</button>
+            </div>
+
+            <div class="tool-status">
+                <label>Tensile Stress (MPa)</label>
+                <div class="readout" id="stress-val">0</div>
+            </div>
+        </div>
+
+        <div class="canvas-area">
+            <canvas id="three-canvas"></canvas>
+        </div>
+
+        <div class="plot-area">
+            <canvas id="stress-chart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<script>
+    (function() {
+        const checkLibs = setInterval(() => {
+            if (typeof THREE !== 'undefined' && typeof Chart !== 'undefined') {
+                clearInterval(checkLibs);
+                document.getElementById('loading-overlay').style.display = 'none';
+                document.getElementById('sim-main').style.visibility = 'visible';
+                startSim();
+            }
+        }, 100);
+
+        function startSim() {
+            let scene, camera, renderer, specimen, gauge, topGrip, bottomGrip;
+            let topHalf, bottomHalf, currentStrain = 0;
+            let isFractured = false, isRunning = false;
+            let shakeIntensity = 0, separationAnim = 0;
+            const baseCameraPos = new THREE.Vector3(0, 50, 550);
+
+            let hParticles = [];
+            const hGeo = new THREE.SphereGeometry(5.5, 48, 32);
+            const hMat = new THREE.MeshPhysicalMaterial({ color: 0xaa0000, roughness: 0.2, emissive: 0x220000 });
+            let lastHValue = 10;
+
+            const canvas = document.getElementById('three-canvas');
+            const container = canvas.parentElement;
+
+            renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 3));
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            renderer.toneMapping = THREE.ReinhardToneMapping;
+            
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 2000);
+            camera.position.copy(baseCameraPos);
+            camera.lookAt(0, 0, 0);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            keyLight.position.set(200, 300, 400);
+            scene.add(keyLight);
+            
+            const metalMat = new THREE.MeshPhongMaterial({ color: 0x999999, shininess: 80, specular: 0x444444 });
+            specimen = new THREE.Group();
+            
+            const gripGeo = new THREE.BoxGeometry(60, 40, 40);
+            topGrip = new THREE.Mesh(gripGeo, metalMat);
+            bottomGrip = new THREE.Mesh(gripGeo, metalMat);
+            topGrip.position.y = 100;
+            bottomGrip.position.y = -100;
+            specimen.add(topGrip, bottomGrip);
+
+            gauge = new THREE.Mesh(new THREE.CylinderGeometry(12, 12, 200, 64), metalMat);
+            specimen.add(gauge);
+
+            const createHalf = (isTop) => {
+                const group = new THREE.Group();
+                const cyl = new THREE.Mesh(new THREE.CylinderGeometry(12, 12, 100, 64), metalMat);
+                cyl.position.y = isTop ? 50 : -50;
+                group.add(cyl);
+                const cap = new THREE.Mesh(new THREE.ConeGeometry(12.5, 15, 32), metalMat);
+                cap.position.y = 0;
+                cap.rotation.x = isTop ? Math.PI : 0;
+                group.add(cap);
+                group.visible = false;
+                return group;
+            };
+            topHalf = createHalf(true);
+            bottomHalf = createHalf(false);
+            specimen.add(topHalf, bottomHalf);
+            scene.add(specimen);
+
+            function onWindowResize() {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight, false);
+            }
+            window.addEventListener('resize', onWindowResize);
+            onWindowResize();
+
+            // Chart Initialization with Adaptive Parameters
+            const ctx = document.getElementById('stress-chart').getContext('2d');
+            const chart = new Chart(ctx, {
+                type: 'line',
+                data: { datasets: [{ data: [], borderColor: '#00e5ff', borderWidth: 2, pointRadius: 0, fill: false }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        x: { type: 'linear', min: 0, max: 30, title: {display: true, text: 'Strain (%)', color: '#888'}, grid: {color: '#222'} },
+                        y: { type: 'linear', min: 0, max: 1400, title: {display: true, text: 'Stress (MPa)', color: '#888'}, grid: {color: '#222'} }
+                    },
+                    plugins: { legend: { display: false } },
+                    animation: false
+                }
+            });
+
+            function spawnHParticles(count) {
+                for(let i=0; i<count; i++) {
+                    const p = new THREE.Mesh(hGeo, hMat);
+                    p.position.set(camera.position.x + (Math.random()-0.5)*300, camera.position.y + (Math.random()-0.5)*300, 450);
+                    p.userData = { progress: 0, speed: 0.025 + Math.random() * 0.02, startPos: p.position.clone(), targetPos: new THREE.Vector3(0, (Math.random()-0.5)*120, 0) };
+                    scene.add(p);
+                    hParticles.push(p);
+                }
+            }
+
+            function updatePhysics(strainPercent) {
+                if (isFractured) return;
+                const s = strainPercent / 100;
+                const h = parseFloat(document.getElementById('hydrogen').value);
+                const n = 0.22 * Math.exp(-h/150);
+                const fractureLimit = 0.25 * Math.exp(-h/50);
+                let stress = (s <= 0.0025) ? 200000 * s : 1250 * Math.pow(s, n);
+                if (s > n) stress *= (1 - (s - n) * 1.5);
+
+                const scaleY = 1 + s;
+                const scaleXZ = (1 / Math.sqrt(scaleY)) * (s > n ? 1 - (s - n)*2 : 1);
+
+                if (s >= fractureLimit) {
+                    isFractured = true; isRunning = false;
+                    gauge.visible = false; topHalf.visible = true; bottomHalf.visible = true;
+                    shakeIntensity = 20.0; separationAnim = 0.01;
+                    chart.data.datasets[0].data.push({x: strainPercent, y: 0});
+                    document.getElementById('stress-val').innerText = "FRACTURE";
+                } else {
+                    gauge.scale.set(scaleXZ, scaleY, scaleXZ);
+                    topGrip.position.y = 100 * scaleY;
+                    bottomGrip.position.y = -100 * scaleY;
+                    document.getElementById('s-value').innerText = strainPercent.toFixed(2) + "%";
+                    document.getElementById('stress-val').innerText = Math.round(stress);
+                    chart.data.datasets[0].data.push({x: strainPercent, y: stress});
+                }
+                chart.update('none');
+            }
+
+            function animate() {
+                requestAnimationFrame(animate);
+
+                // Runtime Theme Parameter Sync Loop
+                const isLightMode = document.documentElement.getAttribute('data-theme') === 'light';
+                
+                // Sync WebGL Engine Context Colors
+                if (isLightMode) {
+                    renderer.setClearColor(0xfdfdfd, 1);
+                    ambientLight.intensity = 1.0;
+                    keyLight.intensity = 1.4;
+                    metalMat.color.setHex(0x777777);
+                    metalMat.specular.setHex(0x888888);
+                    hMat.color.setHex(0xff1111); // Pop particle vibrant red against white background
+                    hMat.emissive.setHex(0x550000);
+                } else {
+                    renderer.setClearColor(0x000000, 0);
+                    ambientLight.intensity = 0.6;
+                    keyLight.intensity = 1.2;
+                    metalMat.color.setHex(0x999999);
+                    metalMat.specular.setHex(0x444444);
+                    hMat.color.setHex(0xaa0000);
+                    hMat.emissive.setHex(0x220000);
+                }
+
+                // Sync Chart Object Settings
+                const targetChartColor = isLightMode ? '#007a8c' : '#00e5ff';
+                const targetGridColor = isLightMode ? '#e2e8f0' : '#222222';
+                const targetLabelColor = isLightMode ? '#666666' : '#888888';
+
+                if (chart.data.datasets[0].borderColor !== targetChartColor || chart.options.scales.x.grid.color !== targetGridColor) {
+                    chart.data.datasets[0].borderColor = targetChartColor;
+                    chart.options.scales.x.grid.color = targetGridColor;
+                    chart.options.scales.y.grid.color = targetGridColor;
+                    chart.options.scales.x.title.color = targetLabelColor;
+                    chart.options.scales.y.title.color = targetLabelColor;
+                    chart.options.scales.x.ticks.color = targetLabelColor;
+                    chart.options.scales.y.ticks.color = targetLabelColor;
+                    chart.update('none');
+                }
+
+                if (isRunning && !isFractured) {
+                    currentStrain += 0.1;
+                    document.getElementById('strain-slider').value = currentStrain;
+                    updatePhysics(currentStrain);
+                }
+                hParticles.forEach((p, i) => {
+                    p.userData.progress += p.userData.speed;
+                    p.position.lerpVectors(p.userData.startPos, p.userData.targetPos, p.userData.progress);
+                    if (p.userData.progress > 0.85) p.scale.setScalar(1 - ((p.userData.progress-0.85)/0.15));
+                    if (p.userData.progress >= 1.0) { scene.remove(p); hParticles.splice(i, 1); }
+                });
+                if (isFractured && separationAnim > 0) {
+                    if (separationAnim < 1) separationAnim += 0.05;
+                    const gap = 20 * (1 - Math.pow(1 - separationAnim, 3));
+                    topHalf.position.y = gap; bottomHalf.position.y = -gap;
+                    topGrip.position.y = topHalf.position.y + (100 * (1 + currentStrain/100));
+                    bottomGrip.position.y = bottomHalf.position.y - (100 * (1 + currentStrain/100));
+                }
+                if (shakeIntensity > 0) {
+                    camera.position.x = baseCameraPos.x + (Math.random()-0.5)*shakeIntensity;
+                    shakeIntensity *= 0.9;
+                    if (shakeIntensity < 0.05) { shakeIntensity = 0; camera.position.copy(baseCameraPos); }
+                }
+                specimen.rotation.y += 0.01;
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            window.resetSim = () => {
+                currentStrain = 0; isFractured = false; isRunning = false;
+                separationAnim = 0; shakeIntensity = 0;
+                camera.position.copy(baseCameraPos);
+                gauge.visible = true; topHalf.visible = false; bottomHalf.visible = false;
+                gauge.scale.set(1, 1, 1); topGrip.position.y = 100; bottomGrip.position.y = -100;
+                document.getElementById('strain-slider').value = 0;
+                document.getElementById('s-value').innerText = "0.0%";
+                document.getElementById('stress-val').innerText = "0";
+                chart.data.datasets[0].data = []; chart.update();
+                hParticles.forEach(p => scene.remove(p)); hParticles = [];
+            };
+
+            document.getElementById('hydrogen').oninput = (e) => {
+                let newVal = parseFloat(e.target.value);
+                if (newVal > lastHValue) spawnHParticles(4);
+                lastHValue = newVal;
+                document.getElementById('h-value').innerText = e.target.value + " ppm";
+            };
+            document.getElementById('hydrogen').onchange = () => window.resetSim();
+            document.getElementById('run-btn').onclick = () => { if (!isFractured) isRunning = true; };
+            document.getElementById('strain-slider').oninput = (e) => {
+                if (!isFractured) {
+                    currentStrain = parseFloat(e.target.value);
+                    chart.data.datasets[0].data = chart.data.datasets[0].data.filter(p => p.x <= currentStrain);
+                    updatePhysics(currentStrain);
+                }
+            };
+
+        }
+    })();
+</script>
+</body>
+</html>
