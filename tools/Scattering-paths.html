@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Interactive ideal HCP zirconium cell and representative FEFF10 single-scattering paths.">
+  <title>HCP Zr | Scattering Paths</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --background: #fff; --foreground: #151515; --muted-foreground: #626262;
+      --sidebar: #f7f7f7; --border: #dedede; --hover: #ededed;
+      --viz-series-1: #2873b6; --viz-series-2: #c76a20; --viz-series-3: #28825a;
+      --viz-series-4: #bf4776; --viz-series-5: #8854b2; --viz-series-6: #138b93;
+      font-family: Arial, Helvetica, sans-serif; font-size: 14px;
+    }
+    * { box-sizing: border-box; letter-spacing: 0; }
+    body { margin: 0; color: var(--foreground); background: var(--background); }
+    button, input { font: inherit; }
+    button, summary, .choice { cursor: pointer; }
+    button:disabled { cursor: wait; opacity: .45; }
+    [hidden] { display: none !important; }
+    #hcp-scattering-paths { display: grid; grid-template-columns: 320px minmax(0,1fr); height: 100dvh; min-height: 600px; }
+    .sidebar { padding: 28px 24px 20px; background: var(--sidebar); border-right: 1px solid var(--border); overflow-y: auto; }
+    .kicker, .section-title, legend, summary, .detail-title { font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    .kicker { margin: 0 0 12px; color: var(--muted-foreground); }
+    h1 { font-size: 28px; line-height: 1.1; margin: 0 0 8px; font-weight: 800; }
+    .subtitle { margin: 0 0 26px; font-size: 12px; color: var(--muted-foreground); }
+    fieldset { margin: 0 0 22px; padding: 0; border: 0; min-width: 0; }
+    legend { padding: 0; margin-bottom: 8px; }
+    .choice { display: grid; grid-template-columns: 14px 14px minmax(0,1fr); align-items: center; gap: 8px; min-height: 40px; padding: 7px 0; }
+    .choice input { margin: 0; width: 14px; height: 14px; accent-color: var(--foreground); }
+    .choice:has(input:checked) .family-name { font-weight: 700; }
+    .swatch { display: block; width: 14px; height: 3px; background: var(--series,var(--foreground)); }
+    .family-name { font-size: 13px; }
+    .family-range { display: block; font-size: 11px; color: var(--muted-foreground); margin-top: 3px; font-variant-numeric: tabular-nums; }
+    .switch-row { display: flex; align-items: center; justify-content: space-between; min-height: 34px; font-size: 12px; cursor: pointer; }
+    .switch-row input { width: 15px; height: 15px; margin: 0; accent-color: var(--foreground); }
+    .selection { border-top: 1px solid var(--border); padding-top: 16px; margin-top: 18px; }
+    .detail-title { margin-bottom: 10px; }
+    .hcp-detail { font-size: 12px; line-height: 1.65; min-height: 50px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    details { margin-top: 18px; border-top: 1px solid var(--border); padding-top: 15px; }
+    summary { width: fit-content; }
+    .metadata { font-size: 12px; line-height: 1.6; }
+    .metadata dl { display: grid; grid-template-columns: 74px minmax(0,1fr); gap: 4px 10px; margin: 14px 0; }
+    .metadata dt { color: var(--muted-foreground); }
+    .metadata dd { margin: 0; overflow-wrap: anywhere; }
+    .metadata p { margin: 12px 0; }
+    .metadata code { font-size: 11px; overflow-wrap: anywhere; }
+    .stage-pane { min-width: 0; min-height: 0; display: flex; flex-direction: column; position: relative; }
+    .hcp-stage { position: relative; flex: 1; min-height: 0; touch-action: none; overflow: hidden; }
+    .hcp-stage canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+    .hcp-stage canvas:active { cursor: grabbing; }
+    .hcp-labels { position: absolute; inset: 0; pointer-events: none; }
+    .hcp-label { position: absolute; white-space: nowrap; font-size: 12px; line-height: 1.3; font-variant-numeric: tabular-nums; color: var(--foreground); text-shadow: 0 1px 2px #fff,0 -1px 2px #fff,1px 0 2px #fff,-1px 0 2px #fff; }
+    .hcp-label .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; background: var(--series); }
+    .toolbar { position: absolute; z-index: 2; top: 18px; right: 18px; display: flex; gap: 4px; }
+    .icon-button { position: relative; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 1px solid var(--border); border-radius: 0; background: var(--background); color: var(--foreground); }
+    .icon-button:hover { background: var(--hover); }
+    .icon-button svg { width: 17px; height: 17px; stroke: currentColor; stroke-width: 1.75; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .icon-button::after { content: attr(data-tooltip); display: none; position: absolute; top: 43px; right: 0; white-space: nowrap; padding: 6px 8px; color: #fff; background: #151515; font-size: 11px; pointer-events: none; }
+    .icon-button:hover::after, .icon-button:focus-visible::after { display: block; }
+    .canvas-footer { padding: 12px 20px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 11px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; border-top: 1px solid var(--border); }
+    .mobile-title { display: none; }
+    .loading { position: absolute; top: 48%; left: 15%; right: 15%; font-size: 13px; text-align: center; color: var(--muted-foreground); line-height: 1.6; }
+    @media (max-width: 760px) {
+      #hcp-scattering-paths { grid-template-columns: minmax(0,1fr); height: auto; min-height: 100dvh; }
+      .stage-pane { grid-row: 1; }
+      .hcp-stage { flex: none; height: 68dvh; min-height: 420px; max-height: 620px; }
+      .sidebar { border-right: 0; border-top: 1px solid var(--border); overflow: visible; padding: 24px 20px; }
+      .sidebar h1 { font-size: 24px; }
+      .subtitle { margin-bottom: 20px; }
+      .mobile-title { display: block; position: absolute; top: 24px; left: 16px; font-weight: 700; font-size: 13px; z-index: 2; }
+      .toolbar { top: 14px; right: 12px; gap: 3px; }
+      .icon-button { width: 40px; height: 40px; }
+      .canvas-footer { padding: 12px 16px; gap: 6px 12px; }
+      .choices { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0 16px; }
+      .choice { min-height: 50px; }
+      .switch-row { min-height: 44px; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+  </style>
+  <script type="importmap">
+    {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}
+  </script>
+</head>
+<body>
+<main id="hcp-scattering-paths">
+  <aside class="sidebar" aria-label="Scattering controls">
+    <p class="kicker">Scattering paths</p>
+    <h1>HCP Zr</h1>
+    <p class="subtitle">Zr K-edge &middot; ideal reference</p>
+    <fieldset>
+      <legend>Paths</legend>
+      <div class="choices">
+        <label class="choice"><input type="radio" name="family" value="all" checked><span class="swatch"></span><span class="family-name">All<span class="family-range">8 representatives</span></span></label>
+        <label class="choice"><input type="radio" name="family" value="0"><span class="swatch" style="--series:var(--viz-series-1)"></span><span class="family-name">Basal first<span class="family-range">3.2320 &Aring;</span></span></label>
+        <label class="choice"><input type="radio" name="family" value="1"><span class="swatch" style="--series:var(--viz-series-2)"></span><span class="family-name">Interlayer first<span class="family-range">3.1788 &Aring;</span></span></label>
+        <label class="choice"><input type="radio" name="family" value="2"><span class="swatch" style="--series:var(--viz-series-3)"></span><span class="family-name">Mixed second<span class="family-range">4.5333 &Aring;</span></span></label>
+        <label class="choice"><input type="radio" name="family" value="3"><span class="swatch" style="--series:var(--viz-series-4)"></span><span class="family-name">Axial<span class="family-range">5.1470 &Aring;</span></span></label>
+        <label class="choice"><input type="radio" name="family" value="4"><span class="swatch" style="--series:var(--viz-series-5)"></span><span class="family-name">Outer I<span class="family-range">5.5674 / 5.5980 &Aring;</span></span></label>
+        <label class="choice"><input type="radio" name="family" value="5"><span class="swatch" style="--series:var(--viz-series-6)"></span><span class="family-name">Outer II<span class="family-range">6.0776 / 6.4640 &Aring;</span></span></label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Display</legend>
+      <label class="switch-row" for="show-labels">Distances<input id="show-labels" type="checkbox" checked></label>
+      <label class="switch-row" for="show-cell">Cell outline<input id="show-cell" type="checkbox" checked></label>
+      <label class="switch-row" for="show-lattice">Surrounding Zr<input id="show-lattice" type="checkbox" checked></label>
+    </fieldset>
+    <section class="selection" aria-label="Selected path details">
+      <div class="detail-title">Selection</div>
+      <div class="hcp-detail" aria-live="polite">8 representative single-scattering paths<br>Zr<sub>0</sub> absorber</div>
+    </section>
+    <details>
+      <summary>Metadata</summary>
+      <div class="metadata">
+        <dl>
+          <dt>Structure</dt><dd>Ideal pristine &alpha;-Zr, HCP</dd>
+          <dt>FEFF</dt><dd>10.0.0, non-SCF, Zr K-edge</dd>
+          <dt>Cell</dt><dd>a = 3.232 &Aring;<br>c = 5.147 &Aring;</dd>
+          <dt>Paths</dt><dd>Two-leg single scattering only</dd>
+          <dt>Traversal</dt><dd>Zr<sub>0</sub> &rarr; Zr &rarr; Zr<sub>0</sub></dd>
+          <dt>Distance</dt><dd>R<sub>eff</sub> = one-way Zr&ndash;Zr distance; not an FT peak position</dd>
+        </dl>
+        <p>One representative is drawn per retained FEFF path. N is the FEFF path degeneracy, not the number of visible rods. The opposite arrows share the same out-and-back line.</p>
+        <p>The outlined conventional hexagonal prism is surrounded by periodic neighbours for the longer paths. It is not the boundary of the FEFF calculation.</p>
+        <p>This is not an H-loaded MD snapshot or the 96-absorber mean geometry. No hydrogen distortion is displayed.</p>
+        <p>Outer I groups paths 5&ndash;6; Outer II groups paths 7&ndash;8. These are display groups, not separate crystallographic planes.</p>
+        <p>Source: <code>Zirconium-XAS/results/md_tsite_loading_all_zr/ac_fit/controls/reference</code></p>
+        <p>Rendering: Three.js 0.160.0 and OrbitControls (MIT). Toolbar icons: Lucide (ISC). The 3D libraries load from jsDelivr and require an internet connection.</p>
+      </div>
+    </details>
+  </aside>
+  <section class="stage-pane" aria-label="HCP cell">
+    <span class="mobile-title">HCP Zr</span>
+    <div class="toolbar" role="toolbar" aria-label="View controls">
+      <button class="icon-button" id="reset-view" type="button" aria-label="Reset view" data-tooltip="Reset view" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
+      <button class="icon-button" id="zoom-in" type="button" aria-label="Zoom in" data-tooltip="Zoom in" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></svg></button>
+      <button class="icon-button" id="zoom-out" type="button" aria-label="Zoom out" data-tooltip="Zoom out" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="8" x2="14" y1="11" y2="11"/></svg></button>
+      <button class="icon-button" id="export-image" type="button" aria-label="Export PNG" data-tooltip="Export PNG" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button>
+    </div>
+    <div class="hcp-stage" role="img" aria-label="Rotatable ideal HCP zirconium cell with eight representative FEFF10 single-scattering paths">
+      <div class="hcp-labels" aria-hidden="true"></div>
+      <div class="loading" role="status">Loading cell&hellip;</div>
+    </div>
+    <footer class="canvas-footer"><span>a = 3.232 &Aring; &nbsp; c = 5.147 &Aring;</span><span>Single scattering</span></footer>
+  </section>
+</main>
+<script type="application/json" id="hcp-scattering-data">
+{
+  "source":"Zirconium-XAS/results/md_tsite_loading_all_zr/ac_fit/controls/reference",
+  "FEFF":"10.0.0", "SCF":false, "edge":"Zr K", "a":3.232, "c":5.147,
+  "geometry":"Ideal pristine FEFF input; not an H-loaded MD snapshot or the 96-absorber mean geometry",
+  "distance":"FEFF R_eff for two-leg SS equals absorber-scatterer distance, not FT-peak position",
+  "display":"One representative per retained SS path; N is FEFF degeneracy, not the number of displayed rods",
+  "paths":[
+    {"id":1,"group":1,"name":"Interlayer first","R":3.1788,"N":6,"xyz":[1.616,0.933,2.5735]},
+    {"id":2,"group":0,"name":"Basal first","R":3.2320,"N":6,"xyz":[-1.616,2.799,0]},
+    {"id":3,"group":2,"name":"Mixed second","R":4.5333,"N":6,"xyz":[0,3.732,-2.5735]},
+    {"id":4,"group":3,"name":"Axial","R":5.1470,"N":2,"xyz":[0,0,5.147]},
+    {"id":5,"group":4,"name":"Outer mixed","R":5.5674,"N":12,"xyz":[-3.232,3.732,-2.5735]},
+    {"id":6,"group":4,"name":"Outer basal","R":5.5980,"N":6,"xyz":[-4.848,2.799,0]},
+    {"id":7,"group":5,"name":"Outer mixed","R":6.0776,"N":12,"xyz":[1.616,-2.799,5.147]},
+    {"id":8,"group":5,"name":"Outer basal","R":6.4640,"N":6,"xyz":[-6.464,0,0]}
+  ],
+  "atoms":[[0,0,0],[-1.616,0.932998,-2.5735],[-1.616,0.932998,2.5735],[1.616,0.932998,-2.5735],[1.616,0.932998,2.5735],[0,-1.8659961,-2.5735],[0,-1.8659961,2.5735],[-3.232,0,0],[-1.616,-2.7989941,0],[-1.616,2.7989941,0],[1.616,-2.7989941,0],[1.616,2.7989941,0],[3.232,0,0],[-3.232,-1.8659961,-2.5735],[-3.232,-1.8659961,2.5735],[0,3.7319921,-2.5735],[0,3.7319921,2.5735],[3.232,-1.8659961,-2.5735],[3.232,-1.8659961,2.5735],[0,0,-5.147],[0,0,5.147],[4.848,0.932998,-2.5735],[4.848,0.932998,2.5735],[-3.232,3.7319921,-2.5735],[-3.232,3.7319921,2.5735],[-1.616,-4.6649902,-2.5735],[-1.616,-4.6649902,2.5735],[3.232,3.7319921,-2.5735],[3.232,3.7319921,2.5735],[-4.848,0.932998,-2.5735],[-4.848,0.932998,2.5735],[1.616,-4.6649902,-2.5735],[1.616,-4.6649902,2.5735],[0,-5.5979882,0],[0,5.5979882,0],[-4.848,-2.7989941,0],[-4.848,2.7989941,0],[4.848,-2.7989941,0],[4.848,2.7989941,0],[-3.232,0,-5.147],[-3.232,0,5.147],[-1.616,-2.7989941,-5.147],[-1.616,-2.7989941,5.147],[-1.616,2.7989941,-5.147],[-1.616,2.7989941,5.147],[1.616,-2.7989941,-5.147],[1.616,-2.7989941,5.147],[1.616,2.7989941,-5.147],[1.616,2.7989941,5.147],[3.232,0,-5.147],[3.232,0,5.147],[-6.464,0,0],[-3.232,-5.5979882,0],[-3.232,5.5979882,0],[3.232,-5.5979882,0],[3.232,5.5979882,0],[6.464,0,0]]
+}
+</script>
+<script type="module">
+const root = document.getElementById('hcp-scattering-paths');
+const loading = root.querySelector('.loading');
+const detail = root.querySelector('.hcp-detail');
+try {
+  const THREE = await import('three');
+  const { OrbitControls } = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js');
+  const stage = root.querySelector('.hcp-stage');
+  const labelLayer = root.querySelector('.hcp-labels');
+  const data = JSON.parse(document.getElementById('hcp-scattering-data').textContent);
+  const scene = new THREE.Scene();
+  const camera = new THREE.OrthographicCamera(-8,8,8,-8,0.01,100);
+  camera.up.set(0,0,1);
+  const renderer = new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setClearColor(0,0);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.domElement.setAttribute('aria-label','HCP Zr single-scattering paths');
+  stage.prepend(renderer.domElement);
+  const controls = new OrbitControls(camera,renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.12;
+  controls.enablePan = true;
+  controls.minZoom = 0.65;
+  controls.maxZoom = 3;
+  scene.add(new THREE.AmbientLight(0xffffff,2.5));
+  const light = new THREE.DirectionalLight(0xffffff,3);
+  light.position.set(8,-12,18);
+  scene.add(light);
+  const color = token => new THREE.Color(getComputedStyle(root).getPropertyValue(token).trim());
+  function material(token,opacity=1) {
+    return new THREE.MeshStandardMaterial({color:color(token),roughness:0.5,metalness:0.06,
+      transparent:opacity<1,opacity,depthWrite:opacity>=1});
+  }
+  const contextMaterial = material('--foreground',0.16);
+  const absorberMaterial = material('--foreground');
+  const cellMaterial = new THREE.LineBasicMaterial({color:color('--foreground'),transparent:true,opacity:0.36});
+  const axisMaterial = new THREE.LineBasicMaterial({color:color('--foreground'),transparent:true,opacity:0.36});
+  const atoms = data.atoms.map(xyz=>new THREE.Vector3(...xyz));
+  const bounds = new THREE.Box3(new THREE.Vector3(-2*data.a,-Math.sqrt(3)*data.a/2,-data.c/2),
+    new THREE.Vector3(data.a,2*data.a/Math.sqrt(3),data.c));
+  const center = bounds.getCenter(new THREE.Vector3());
+  const defaultCamera = center.clone().add(new THREE.Vector3(18,-11,9));
+  camera.position.copy(defaultCamera);
+  controls.target.copy(center);
+  controls.update();
+  const visibleAtoms = atoms.filter(point=>bounds.clone().expandByScalar(0.001).containsPoint(point));
+  function nearest(point,tolerance=0.0002) {
+    let best = atoms[0], distance = Infinity;
+    for (const atom of atoms) {
+      const candidate = atom.distanceTo(point);
+      if (candidate<distance) { best=atom; distance=candidate; }
+    }
+    if (distance>tolerance) throw new Error(`No FEFF Zr atom at ${point.toArray()}`);
+    return best.clone();
+  }
+  const sphere = new THREE.SphereGeometry(1,24,16);
+  const contextGroup = new THREE.Group();
+  for (const atom of visibleAtoms) {
+    const mesh = new THREE.Mesh(sphere,contextMaterial);
+    mesh.position.copy(atom);
+    mesh.scale.setScalar(0.15);
+    contextGroup.add(mesh);
+  }
+  scene.add(contextGroup);
+  const absorber = new THREE.Mesh(sphere,absorberMaterial);
+  absorber.scale.setScalar(0.34);
+  scene.add(absorber);
+
+  // Snap every cell vertex to a real FEFF Zr atom, rather than a constructed endpoint.
+  const ring = Array.from({length:6},(_,i)=>nearest(new THREE.Vector3(data.a*Math.cos(i*Math.PI/3),data.a*Math.sin(i*Math.PI/3),0)));
+  const top = ring.map(point=>nearest(point.clone().add(new THREE.Vector3(0,0,data.c))));
+  const edges = [];
+  for (let i=0;i<6;i++) edges.push([ring[i],ring[(i+1)%6]],[top[i],top[(i+1)%6]],[ring[i],top[i]]);
+  const cellWire = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(edges.flat()),cellMaterial);
+  scene.add(cellWire);
+  const cellAtoms = new THREE.Group();
+  const cellAtomMaterial = material('--foreground',0.48);
+  for (const point of [...ring,...top,new THREE.Vector3(0,0,data.c)]) {
+    const mesh = new THREE.Mesh(sphere,cellAtomMaterial);
+    mesh.scale.setScalar(0.19);
+    mesh.position.copy(point);
+    cellAtoms.add(mesh);
+  }
+  scene.add(cellAtoms);
+  function rod(start,end,radius,mat) {
+    const delta = end.clone().sub(start);
+    const cylinder = new THREE.Mesh(new THREE.CylinderGeometry(radius,radius,delta.length(),12),mat);
+    cylinder.position.copy(start).add(end).multiplyScalar(0.5);
+    cylinder.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());
+    return cylinder;
+  }
+  function arrow(point,direction,mat) {
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(0.12,0.33,16),mat);
+    cone.position.copy(point);
+    cone.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),direction);
+    return cone;
+  }
+  const annotations = [];
+  function annotate(point,text,group=null) {
+    const node = document.createElement('div');
+    node.className = 'hcp-label';
+    if (group!==null) {
+      node.style.setProperty('--series',`var(--viz-series-${group+1})`);
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      node.append(dot);
+    }
+    node.append(document.createTextNode(text));
+    labelLayer.append(node);
+    const label = {point:point.clone(),node,group};
+    annotations.push(label);
+    return label;
+  }
+  const paths = [], pickables = [];
+  for (const source of data.paths) {
+    const end = nearest(new THREE.Vector3(...source.xyz));
+    const direction = end.clone().normalize();
+    const start = direction.clone().multiplyScalar(0.34);
+    const stop = end.clone().addScaledVector(direction,-0.26);
+    const mat = material(`--viz-series-${source.group+1}`);
+    const group = new THREE.Group();
+    group.add(rod(start,stop,0.042,mat));
+    // Single scattering traverses this geometric line in both directions.
+    group.add(arrow(end.clone().multiplyScalar(0.69),direction,mat));
+    group.add(arrow(end.clone().multiplyScalar(0.41),direction.clone().negate(),mat));
+    const atom = new THREE.Mesh(sphere,mat);
+    atom.position.copy(end);
+    atom.scale.setScalar(0.26);
+    group.add(atom);
+    for (const mesh of group.children) { mesh.userData.family=source.group; pickables.push(mesh); }
+    scene.add(group);
+    const text = source.id===4 ? `c \u00b7 ${source.R.toFixed(3)} \u00c5` : `${source.id} \u00b7 ${source.R.toFixed(3)} \u00c5`;
+    const label = annotate(end,text,source.group);
+    paths.push({...source,start:start.clone(),end:end.clone(),object:group,material:mat,label});
+  }
+  annotate(new THREE.Vector3(),'Zr\u2080');
+  const axes = new THREE.Group();
+  const axisPoints = [new THREE.Vector3(data.a,0,0),new THREE.Vector3(-data.a/2,Math.sqrt(3)*data.a/2,0)];
+  for (let i=0;i<2;i++) {
+    const endpoint = nearest(axisPoints[i]);
+    axes.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),endpoint]),axisMaterial));
+    annotate(endpoint,`a${i===0?'\u2081':'\u2082'}`);
+  }
+  scene.add(axes);
+  let selected = null;
+  function selectFamily(id) {
+    selected = id;
+    for (const path of paths) {
+      const opacity = selected===null || path.group===selected ? 1 : 0.12;
+      path.material.opacity=opacity;
+      path.material.transparent=opacity<1;
+      path.material.depthWrite=opacity>=1;
+    }
+    for (const input of root.querySelectorAll('input[name="family"]')) input.checked=input.value===(selected===null?'all':String(selected));
+    detail.replaceChildren();
+    if (selected===null) {
+      detail.append('8 representative single-scattering paths',document.createElement('br'),'Zr\u2080 absorber');
+    } else {
+      for (const path of paths.filter(p=>p.group===selected)) {
+        const row=document.createElement('div');
+        row.textContent=`${path.id}: ${path.name} \u00b7 R = ${path.R.toFixed(4)} \u00c5 \u00b7 N = ${path.N}`;
+        detail.append(row);
+      }
+      detail.append('Zr\u2080 \u2192 Zr \u2192 Zr\u2080');
+    }
+  }
+  for (const input of root.querySelectorAll('input[name="family"]')) input.addEventListener('change',()=>selectFamily(input.value==='all'?null:Number(input.value)));
+  selectFamily(null);
+  document.getElementById('show-labels').addEventListener('change',event=>{ labelLayer.hidden=!event.target.checked; });
+  document.getElementById('show-cell').addEventListener('change',event=>{ cellWire.visible=event.target.checked; axes.visible=event.target.checked; });
+  document.getElementById('show-lattice').addEventListener('change',event=>{ contextGroup.visible=event.target.checked; });
+  const raycaster = new THREE.Raycaster();
+  let down=null;
+  renderer.domElement.addEventListener('pointerdown',event=>{down=[event.clientX,event.clientY];});
+  renderer.domElement.addEventListener('pointerup',event=>{
+    if (!down || Math.hypot(event.clientX-down[0],event.clientY-down[1])>5) { down=null; return; }
+    down=null;
+    const rect=renderer.domElement.getBoundingClientRect();
+    raycaster.setFromCamera(new THREE.Vector2(2*(event.clientX-rect.left)/rect.width-1,1-2*(event.clientY-rect.top)/rect.height),camera);
+    const hit=raycaster.intersectObjects(pickables,false)[0];
+    if (hit) selectFamily(hit.object.userData.family===selected?null:hit.object.userData.family);
+  });
+  renderer.domElement.addEventListener('pointercancel',()=>{ down=null; });
+  function resize() {
+    const width=stage.clientWidth,height=stage.clientHeight;
+    if (!width || !height) return;
+    const aspect=width/height;
+    camera.updateMatrixWorld();
+    const projected=visibleAtoms.map(atom=>atom.clone().applyMatrix4(camera.matrixWorldInverse));
+    const halfX=Math.max(...projected.map(p=>Math.abs(p.x)))+0.9;
+    const halfY=Math.max(...projected.map(p=>Math.abs(p.y)))+0.9;
+    const extent=Math.max(halfY,halfX/aspect);
+    camera.left=-extent*aspect; camera.right=extent*aspect;
+    camera.top=extent; camera.bottom=-extent;
+    camera.updateProjectionMatrix();
+    renderer.setSize(width,height,false);
+  }
+  new ResizeObserver(resize).observe(stage);
+  resize();
+  function resetView() {
+    controls.enableDamping=false;
+    controls.reset();
+    controls.target.copy(center);
+    camera.position.copy(defaultCamera);
+    camera.up.set(0,0,1);
+    camera.zoom=1;
+    controls.update();
+    controls.enableDamping=!matchMedia('(prefers-reduced-motion: reduce)').matches;
+    resize();
+  }
+  controls.saveState();
+  controls.enableDamping=!matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.getElementById('reset-view').addEventListener('click',resetView);
+  function zoom(factor) {
+    camera.zoom=Math.min(controls.maxZoom,Math.max(controls.minZoom,camera.zoom*factor));
+    camera.updateProjectionMatrix();
+  }
+  document.getElementById('zoom-in').addEventListener('click',()=>zoom(1.2));
+  document.getElementById('zoom-out').addEventListener('click',()=>zoom(1/1.2));
+  function labelPositions() {
+    const occupied=[];
+    const width=stage.clientWidth,height=stage.clientHeight;
+    const stageRect=stage.getBoundingClientRect();
+    const exclusions=[...root.querySelectorAll('.toolbar,.mobile-title')].filter(node=>getComputedStyle(node).display!=='none').map(node=>{
+      const box=node.getBoundingClientRect();
+      return {left:box.left-stageRect.left-5,top:box.top-stageRect.top-5,right:box.right-stageRect.left+5,bottom:box.bottom-stageRect.top+5};
+    });
+    const active=annotations.filter(label=>label.group===null||selected===null||label.group===selected);
+    for (const annotation of annotations) annotation.node.hidden=!active.includes(annotation);
+    for (const label of active) {
+      const point=label.point.clone().project(camera);
+      const px=(point.x+1)*width/2,py=(1-point.y)*height/2;
+      const w=label.node.offsetWidth,h=label.node.offsetHeight;
+      const candidates=[[12,-h-4],[12,7],[-w-12,-h-4],[-w-12,7],[12,-h-25],[-w/2,24],[12,29],[-w-12,29]];
+      let position=null;
+      for (const [dx,dy] of candidates) {
+        const box={left:px+dx,top:py+dy,right:px+dx+w,bottom:py+dy+h};
+        if (box.left<4||box.top<4||box.right>width-4||box.bottom>height-4) continue;
+        if ([...occupied,...exclusions].some(b=>box.left<b.right+5&&box.right>b.left-5&&box.top<b.bottom+4&&box.bottom>b.top-4)) continue;
+        position=box; break;
+      }
+      label.node.hidden=!position||point.z<-1||point.z>1;
+      if (position) {
+        label.node.style.left=`${position.left}px`;
+        label.node.style.top=`${position.top}px`;
+        occupied.push(position);
+      }
+    }
+  }
+  document.getElementById('export-image').addEventListener('click',()=>{
+    renderer.render(scene,camera);
+    labelPositions();
+    const output=document.createElement('canvas');
+    const scale=renderer.getPixelRatio();
+    output.width=renderer.domElement.width;
+    output.height=renderer.domElement.height+Math.ceil(40*scale);
+    const ctx=output.getContext('2d');
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,output.width,output.height);
+    ctx.drawImage(renderer.domElement,0,0);
+    ctx.scale(scale,scale);
+    if (!labelLayer.hidden) for (const annotation of annotations.filter(a=>!a.node.hidden)) {
+      const x=parseFloat(annotation.node.style.left),y=parseFloat(annotation.node.style.top);
+      const style=getComputedStyle(annotation.node);
+      ctx.font=`${style.fontWeight} ${style.fontSize} Arial`;
+      ctx.textBaseline='top'; ctx.lineWidth=3; ctx.strokeStyle='#fff';
+      const dot=annotation.group!==null;
+      if (dot) {
+        ctx.fillStyle=getComputedStyle(annotation.node.querySelector('.dot')).backgroundColor;
+        ctx.beginPath(); ctx.arc(x+3.5,y+7,3.5,0,2*Math.PI); ctx.fill();
+      }
+      ctx.strokeText(annotation.node.textContent,x+(dot?11:0),y);
+      ctx.fillStyle=style.color; ctx.fillText(annotation.node.textContent,x+(dot?11:0),y);
+    }
+    ctx.font='12px Arial'; ctx.fillStyle='#626262'; ctx.textBaseline='top';
+    ctx.fillText(`Ideal HCP Zr \u00b7 FEFF10 SS \u00b7 a = ${data.a.toFixed(3)} \u00c5 \u00b7 c = ${data.c.toFixed(3)} \u00c5`,16,stage.clientHeight+13);
+    output.toBlob(blob=>{
+      if (!blob) { detail.textContent='Image export unavailable'; return; }
+      const url=URL.createObjectURL(blob),link=document.createElement('a');
+      link.href=url; link.download='hcp-zr-scattering-paths.png';
+      link.click(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+    },'image/png');
+  });
+  for (const button of root.querySelectorAll('.icon-button')) button.disabled=false;
+  root.hcpScene={renderer,scene,camera,controls,data,atoms,edges,paths,contextGroup,cellWire,axes,get selected(){return selected;}};
+  root.dataset.ready='true';
+  loading.hidden=true;
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update(); renderer.render(scene,camera); labelPositions();
+  }
+  animate();
+} catch (error) {
+  loading.textContent='The 3D viewer could not load. Check your internet connection and WebGL support, then reload.';
+  loading.setAttribute('role','alert');
+  root.dataset.ready='error';
+  console.error(error);
+}
+</script>
+</body>
+</html>
